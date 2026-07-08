@@ -1,0 +1,87 @@
+[project]
+name = "ossify-cogents"
+version = "0.1.0"
+description = "Manage, version, and synchronize AI coding agent configurations across repositories."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { file = "LICENSE" }
+dependencies = [
+    "typer>=0.12",
+    "rich>=13.7",
+    "pydantic>=2.7",
+    "dependency-injector>=4.41",
+]
+
+[project.scripts]
+ossify-cogents = "cli:app"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "pytest>=8.3",
+    "import-linter>=2.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "src/domain",
+    "src/ports_in",
+    "src/ports_out",
+    "src/application",
+    "src/adapters",
+    "src/cli",
+    "src/tui",
+]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/container.py" = "container.py"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+mypy_path = "src"
+explicit_package_bases = true
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+[tool.importlinter]
+root_packages = [
+    "domain",
+    "ports_in",
+    "ports_out",
+    "application",
+    "adapters",
+    "cli",
+    "tui",
+]
+
+[[tool.importlinter.contracts]]
+name = "Domain has no outward dependencies"
+type = "forbidden"
+source_modules = ["domain"]
+forbidden_modules = ["ports_in", "ports_out", "application", "adapters", "cli", "tui"]
+
+[[tool.importlinter.contracts]]
+name = "Ports depend only on domain"
+type = "forbidden"
+source_modules = ["ports_in", "ports_out"]
+forbidden_modules = ["application", "adapters", "cli", "tui"]
+
+[[tool.importlinter.contracts]]
+name = "Application, adapters, cli, and tui are mutually independent"
+type = "independence"
+modules = ["application", "adapters", "cli", "tui"]
