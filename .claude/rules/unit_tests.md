@@ -9,8 +9,32 @@ description: Unit testing rules for ossify-cogents. Applies to all files under .
 
 These rules apply to everything under `./tests`. They override generic testing habits when in conflict.
 
-## Folder Structure
-- mimic code under test structure
+## Tests Folder Structure
+Important! Thre are 3 test categories:  **unit**, **integration** and **e2e**, each of which has own locattion rules (see structure below) 
+
+    tests/                 # Dedicated tests root directory
+    ├── __init__.py
+    ├── conftest.py        # Global pytest fixtures (e.g., general mocks)
+    │
+    ├── unit/              # 1. Unit tests are fast, run in milliseconds, and utilize heavy mocking (no dependency on infrastructure). You want to run these on every local code save.
+    │   ├── __init__.py
+    │   ├── /application/test_example.py   # Mirrors src/application/example.py
+    │
+    ├── integration/       # 2. Require external infrastructure components (git, databases, spin up mock servers, or initiate HTTP requests). They are slow and prone to network 
+    │   ├── __init__.py
+    │   ├── conftest.py    # git connections / PAT set up, etc.
+    │   └── test_git_connectivity.py  
+    │
+    └── e2e/               # 3. User workflows (Full stack, UI, or complete CLI) 
+        ├── __init__.py
+        ├── conftest.py    # Browser, Playwright, or Docker spin-up configs
+        └── test_ossify_version_flow.py # example
+
+- Inside `tests/unit/`, duplicate the file names and internal structures of your `src/` directory. For instance, if you have a component at `src/application/login.py`, its corresponding unit test should sit at `tests/unit/application/test_login.py`.
+- Use `conftest.py` hierarchically
+  - Define global fixtures (like basic configurations) in `tests/conftest.py` 
+  - Define test git repos or container life cycles inside `tests/integration/conftest.py`. - will be used for all integration tests (but only for them) 
+  - Define `tests/e2e/conftest.py` to provide config for all e2e test (and only for them)
 
 ## Framework
 
