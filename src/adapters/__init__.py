@@ -1,5 +1,6 @@
-"""Concrete implementations of `ports_out/`: `sources/`, `targets/`, `persistence/`.
+"""Concrete implementations of `ports_out/`.
 
-No concrete adapter exists yet — that's future feature work. Only
-`container.py` is allowed to import from this package.
+Submodules ot packages should be created/updated durint feature by the
+feature work that needs them, not pre-scaffolded here. Only `container.py`
+is allowed to import from this package.
 """

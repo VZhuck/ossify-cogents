@@ -7,16 +7,16 @@ Initial project structure set up
 ## Requirements
 
 ### Requirement: Hexagonal package layout
-The system SHALL organize `src/` into the following top-level packages, each its own installed package with a single responsibility, and no wrapping package folder grouping them: `domain/` (pydantic models and errors), `ports_in/` (interfaces implemented by `application/` and called by entrypoints), `ports_out/` (interfaces implemented by `adapters/` and called by `application/`), `application/` (use cases), `adapters/` (concrete implementations of `ports_out`, including `sources/`, `targets/`, `persistence/` subpackages), `cli/` (Typer entrypoint), `tui/` (Textual entrypoint placeholder), and `container.py` (dependency-injector wiring).
+The system SHALL organize `src/` into the following top-level packages, each its own installed package with a single responsibility, and no wrapping package folder grouping them: `domain/` (pydantic models and errors), `ports_in/` (interfaces implemented by `application/` and called by entrypoints), `ports_out/` (interfaces implemented by `adapters/` and called by `application/`), `application/` (use cases), `adapters/` (concrete implementations of `ports_out`; subpackages such as `sources/`, `targets/`, `persistence/` are added by the feature work that needs them, not pre-scaffolded), `cli/` (Typer entrypoint), `tui/` (Textual entrypoint placeholder), and `container.py` (dependency-injector wiring).
 
 #### Scenario: Package layout exists
 - **WHEN** the repository is inspected after this change
 - **THEN** `src/domain/`, `src/ports_in/`, `src/ports_out/`, `src/application/`, `src/adapters/`, `src/cli/`, `src/tui/`, and `src/container.py` all exist directly under `src/`
 
-#### Scenario: Adapter subpackages exist without concrete adapters
+#### Scenario: Adapters package has no concrete adapters or subpackages yet
 - **WHEN** `src/adapters/` is inspected
-- **THEN** `sources/`, `targets/`, and `persistence/` subpackages exist as empty extension points
-- **THEN** no concrete source, target, or persistence adapter implementation is present
+- **THEN** it contains only `__init__.py`
+- **THEN** no `sources/`, `targets/`, `persistence/`, or other adapter subpackage exists until a feature adds one
 
 ### Requirement: Import boundaries are enforced by tooling
 The system SHALL enforce, via `import-linter` configuration, that: `domain` imports nothing else from this project; `ports_in` and `ports_out` import only from `domain`; and `application`, `adapters`, `cli`, and `tui` never import one another directly.
