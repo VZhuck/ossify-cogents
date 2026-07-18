@@ -1,6 +1,7 @@
-"""Outbound ports: interfaces `application/` depends on, implemented by `adapters/`.
+"""Outbound ports: interfaces `application/` depends on, implemented by `adapters/`."""
 
-Empty for now — no use case needs an outbound dependency yet. The first real
-feature (a source or target adapter) will add its port here, e.g.
-`SourcePort`, `TargetPort`, `ConfigRepository`, `LockRepository`.
-"""
+from ports_out._config_repository import ConfigRepository
+from ports_out._registry_repository import RegistryRepository
+from ports_out._workspace_locator import WorkspaceLocator
+
+__all__ = ["ConfigRepository", "RegistryRepository", "WorkspaceLocator"]

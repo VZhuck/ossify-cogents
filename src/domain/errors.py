@@ -13,3 +13,15 @@ class OssifyError(Exception):
 
 class VersionUnavailableError(OssifyError):
     """Raised when the installed package version cannot be determined."""
+
+
+class ConfigNotFoundError(OssifyError):
+    """Raised when no ossify-cogents.json exists at the resolved workspace root."""
+
+
+class DuplicateSourceIdError(OssifyError):
+    """Raised when a registry entry's `id` collides with an existing entry."""
+
+
+class InvalidRegistryEntryError(OssifyError):
+    """Raised when a registry entry violates a business rule (e.g. `ref` on a local source)."""
