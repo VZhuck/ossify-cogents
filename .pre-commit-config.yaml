@@ -23,3 +23,11 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
+      - id: schema-drift
+        name: schema/v1.json matches models
+        entry: >-
+          bash -c 'uv run python scripts/generate_schema.py &&
+          git diff --exit-code schema/v1.json'
+        language: system
+        types: [python]
+        pass_filenames: false

@@ -12,6 +12,7 @@ class ConfigSection(StrEnum):
     """Maps a use case to its on-disk top-level key in ossify-cogents.json."""
 
     SKILL_REGISTRY = "ossify-skills-registry"
+    DISCOVERY_DEFINITIONS = "discovery-definitions"
 
 
 class OssifyConfig(BaseModel):

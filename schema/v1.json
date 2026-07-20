@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ossify-cogents.json",
+  "type": "object",
+  "properties": {
+    "ossify-skills-registry": {
+      "items": {
+        "$ref": "#/$defs/SkillSource"
+      },
+      "type": "array"
+    },
+    "discovery-definitions": {
+      "items": {
+        "$ref": "#/$defs/DiscoveryDefinition"
+      },
+      "type": "array"
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "SkillSource": {
+      "description": "A single registry entry: identity plus its source location.\n\n`ref` is only meaningful for a `git` source_type; the coupling between\nsource_type and ref is enforced here (not via separate Git/Local classes)\nso it stays a single model \u2014 see design.md for the rationale.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "source-type": {
+          "enum": [
+            "git",
+            "local"
+          ],
+          "title": "Source-Type",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "discovery": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Discovery",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "source-type",
+        "source"
+      ],
+      "title": "SkillSource",
+      "type": "object"
+    },
+    "Source": {
+      "description": "Location of a skill source: a git remote (uri + ref) or a local path (uri only).",
+      "properties": {
+        "uri": {
+          "title": "Uri",
+          "type": "string"
+        },
+        "ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref"
+        }
+      },
+      "required": [
+        "uri"
+      ],
+      "title": "Source",
+      "type": "object"
+    },
+    "ByPatternRule": {
+      "description": "A glob rule for a free-form, project-defined capability category.",
+      "properties": {
+        "type": {
+          "enum": [
+            "file",
+            "folder"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "category": {
+          "title": "Category",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "path",
+        "category"
+      ],
+      "title": "ByPatternRule",
+      "type": "object"
+    },
+    "DiscoveryDefinition": {
+      "description": "A custom `discovery-definitions` entry: an id plus its category mappings.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "custom",
+          "default": "custom",
+          "title": "Type",
+          "type": "string"
+        },
+        "mappings": {
+          "$ref": "#/$defs/Mapping"
+        }
+      },
+      "required": [
+        "id",
+        "mappings"
+      ],
+      "title": "DiscoveryDefinition",
+      "type": "object"
+    },
+    "GlobRule": {
+      "description": "One glob rule: a file or folder pattern relative to a source's root.",
+      "properties": {
+        "type": {
+          "enum": [
+            "file",
+            "folder"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "path"
+      ],
+      "title": "GlobRule",
+      "type": "object"
+    },
+    "Mapping": {
+      "description": "Per-category glob rules for a discovery strategy.",
+      "properties": {
+        "agents": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/GlobRule"
+          },
+          "title": "Agents",
+          "type": "array"
+        },
+        "skills": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/GlobRule"
+          },
+          "title": "Skills",
+          "type": "array"
+        },
+        "commands": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/GlobRule"
+          },
+          "title": "Commands",
+          "type": "array"
+        },
+        "rules": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/GlobRule"
+          },
+          "title": "Rules",
+          "type": "array"
+        },
+        "by-pattern": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ByPatternRule"
+          },
+          "title": "By-Pattern",
+          "type": "array"
+        }
+      },
+      "title": "Mapping",
+      "type": "object"
+    }
+  }
+}

@@ -11,7 +11,8 @@ from adapters.ossify_config_adapter import OssifyConfigAdapter
 from adapters.skill_registry_adapter import SkillRegistryAdapter
 from adapters.workspace_adapter import WorkspaceAdapter
 from application import GetVersion, RegistryService, VerifyConfig
-from application.services import RegistryValidator, SourceInferenceService
+from application.services import DiscoveryResolver, RegistryValidator, SourceInferenceService
+from domain._builtins import BUILTIN_DISCOVERY_STRATEGIES
 
 
 class Container(containers.DeclarativeContainer):
@@ -25,6 +26,7 @@ class Container(containers.DeclarativeContainer):
 
     source_inference_service = providers.Factory(SourceInferenceService)
     registry_validator = providers.Factory(RegistryValidator)
+    discovery_resolver = providers.Factory(DiscoveryResolver, builtins=BUILTIN_DISCOVERY_STRATEGIES)
 
     registry_use_case = providers.Factory(
         RegistryService,
@@ -36,4 +38,5 @@ class Container(containers.DeclarativeContainer):
         VerifyConfig,
         config_repository=ossify_config_adapter,
         validator=registry_validator,
+        discovery_resolver=discovery_resolver,
     )

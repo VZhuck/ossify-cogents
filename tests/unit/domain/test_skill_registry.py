@@ -49,3 +49,28 @@ def test_local_entry_rejects_explicit_ref() -> None:
             source_type="local",
             source={"uri": "./experiments/my-skills", "ref": "develop"},
         )
+
+
+def test_discovery_defaults_to_empty_list_when_omitted() -> None:
+    entry = SkillSource(
+        id="agent-pack",
+        name="Agent Pack",
+        description="",
+        source_type="git",
+        source={"uri": "https://github.com/acme-org/agent-pack.git"},
+    )
+
+    assert entry.discovery == []
+
+
+def test_discovery_keeps_explicit_ids() -> None:
+    entry = SkillSource(
+        id="agent-pack",
+        name="Agent Pack",
+        description="",
+        source_type="git",
+        source={"uri": "https://github.com/acme-org/agent-pack.git"},
+        discovery=["ossify-open-standard"],
+    )
+
+    assert entry.discovery == ["ossify-open-standard"]

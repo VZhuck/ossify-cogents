@@ -29,7 +29,9 @@ class OssifyConfigAdapter:
 
     def write_section(self, root: Path, section: ConfigSection, value: T, model: type[T]) -> None:
         config = self._load(root)
-        raw_value = TypeAdapter(model).dump_python(value, mode="json", exclude_none=True)
+        raw_value = TypeAdapter(model).dump_python(
+            value, mode="json", exclude_none=True, by_alias=True
+        )
         updated = config.with_section_value(section, raw_value)
         self._save(root, updated)
 

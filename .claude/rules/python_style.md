@@ -18,6 +18,7 @@ These fill the gaps ruff/mypy config doesn't cover — they don't restate what t
 
 - Domain models are `pydantic.BaseModel`. Default to frozen (`model_config = ConfigDict(frozen=True)`) unless a model has a real reason to mutate — most of this domain (config, lock entries, mappings) is read, diffed, and replaced, not mutated in place.
 - Validation lives on the model (`field_validator`/`model_validator`), not scattered in call sites.
+- Every model that round-trips through `ossify-cogents.json` inherits `domain.config_model.ConfigModel` (not `BaseModel` directly), so its on-disk field names are kebab-case regardless of the Python (snake_case) field name — e.g. `source_type` serializes as `source-type`. `ConfigModel` sets the kebab `alias_generator` and `populate_by_name=True`, so in-code construction by snake_case keyword (`SkillSource(source_type=...)`) still works. Don't add per-field `alias=` overrides for this — the generator handles it.
 
 ## Errors
 
@@ -32,7 +33,7 @@ These fill the gaps ruff/mypy config doesn't cover — they don't restate what t
 
 ## Functions & structure
 
-- No mutable default arguments (`def f(items: list = [])` is a bug magnet — use `None` + assign inside).
+- No mutable default arguments (`def f(items: list = [])` is a bug magnet — use `None` + assign inside). This is a *function-parameter* rule, not a pydantic-field rule: a pydantic `BaseModel`/`ConfigModel` field default like `discovery: list[str] = []` or `agents: list[GlobRule] = []` is fine and is the established pattern in this codebase (`domain/skill_registry.py`, `domain/discovery.py`) — pydantic deep-copies the default per instance, so it doesn't share mutable state the way a Python function default does.
 - Prefer `pathlib.Path` over `os.path` string manipulation everywhere.
 - Small, single-purpose functions over deeply nested conditionals; prefer early returns/guard clauses over nested `if`.
 - Composition over inheritance for adapters — a new source/target is a new class implementing a `Protocol`, not a subclass of some shared "BaseAdapter."

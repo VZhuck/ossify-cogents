@@ -25,3 +25,11 @@ class DuplicateSourceIdError(OssifyError):
 
 class InvalidRegistryEntryError(OssifyError):
     """Raised when a registry entry violates a business rule (e.g. `ref` on a local source)."""
+
+
+class UnresolvableDiscoveryIdError(OssifyError):
+    """Raised when a `discovery` id matches neither a built-in nor a custom strategy."""
+
+
+class DuplicateDiscoveryIdError(OssifyError):
+    """Raised when a `discovery-definitions` id collides with another custom entry or a built-in."""
