@@ -6,6 +6,7 @@ import typer
 from rich.console import Console
 
 from cli._config import config_app
+from cli._init import init as init_command
 from cli._registry import registry_app
 from container import Container
 from ports_in import VersionPort
@@ -13,6 +14,7 @@ from ports_in import VersionPort
 app = typer.Typer(name="ossify-cogents", no_args_is_help=True)
 app.add_typer(registry_app, name="registry")
 app.add_typer(config_app, name="config")
+app.command("init")(init_command)
 console = Console()
 
 _WORKSPACE_OPTION = typer.Option(

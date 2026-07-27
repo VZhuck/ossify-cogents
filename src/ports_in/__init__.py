@@ -5,8 +5,9 @@ to inherit from anything — structural typing keeps entrypoints decoupled from
 a shared base class.
 """
 
+from ports_in._init import InitPort
 from ports_in._ossify_config import OssifyConfigPort
 from ports_in._registry import RegistryPort
 from ports_in._version import VersionPort
 
-__all__ = ["OssifyConfigPort", "RegistryPort", "VersionPort"]
+__all__ = ["InitPort", "OssifyConfigPort", "RegistryPort", "VersionPort"]

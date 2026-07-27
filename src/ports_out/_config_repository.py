@@ -15,6 +15,10 @@ class ConfigRepository(Protocol):
 
     def exists(self, root: Path) -> bool: ...
 
+    def delete(self, root: Path) -> None:
+        """Remove the config file if present; a no-op when it does not exist."""
+        ...
+
     def read_section(self, root: Path, section: ConfigSection, model: type[T]) -> T | None: ...
 
     def write_section(

@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-07-27
+goal: Add an 'ossify init' command that scaffolds a default ossify-cogents.json
+  and fast-fails if one exists

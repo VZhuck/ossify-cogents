@@ -19,6 +19,10 @@ class ConfigNotFoundError(OssifyError):
     """Raised when no ossify-cogents.json exists at the resolved workspace root."""
 
 
+class ConfigAlreadyExistsError(OssifyError):
+    """Raised when `ossify init` finds an ossify-cogents.json already at the workspace root."""
+
+
 class DuplicateSourceIdError(OssifyError):
     """Raised when a registry entry's `id` collides with an existing entry."""
 

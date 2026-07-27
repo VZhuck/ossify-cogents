@@ -11,7 +11,7 @@ from adapters.ossify_config_adapter import OssifyConfigAdapter
 from adapters.skill_registry_adapter import SkillRegistryAdapter
 from adapters.targets import FilesystemTargetAdapter
 from adapters.workspace_adapter import WorkspaceAdapter
-from application import GetVersion, RegistryService, VerifyConfig
+from application import GetVersion, InitConfig, RegistryService, VerifyConfig
 from application.services import (
     DiscoveryResolver,
     InstallResolver,
@@ -54,3 +54,4 @@ class Container(containers.DeclarativeContainer):
         discovery_resolver=discovery_resolver,
         install_resolver=install_resolver,
     )
+    init_use_case = providers.Factory(InitConfig, config_repository=ossify_config_adapter)
