@@ -1,10 +1,4 @@
-# config-verify Specification
-
-## Purpose
-
-Defines the `ossify-cogents config verify` CLI command, which validates the config file's registry section against the `SkillSource`/`OssifyConfig` schema and reports schema or uniqueness violations.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: `config verify` validates config schema
 The CLI SHALL support `ossify-cogents config verify`, which reads the config file at the resolved workspace root and validates its registry section against the `SkillSource`/`OssifyConfig` schema, including duplicate-`id` checks, and additionally validates: (1) that every id in every registry entry's `discovery` list resolves against the union of built-in discovery strategies and the config file's `discovery-definitions` section, (2) that no `discovery-definitions` entry's `id` collides with another `discovery-definitions` entry's `id` or with a built-in strategy's `id` (this is also how an `ossify-`-prefixed custom id gets rejected — as an already-defined id, not via a dedicated reserved-prefix check), and additionally performs the offline (network-free) parts of install validation for every entry that declares an `install` block: (3) that every `install.by-pattern` entry's `category` resolves against the by-pattern categories declared by that entry's discovery strategies, and (4) that every `install.target-platforms` value is a registered target-adapter id (or the `"*"` wildcard). The set of registered target-adapter ids SHALL be supplied to the verification step by the container, analogous to how built-in discovery strategies are supplied. Selection-glob resolution against actually-discovered ids requires fetching sources and is a sync-time concern out of scope for this offline command.

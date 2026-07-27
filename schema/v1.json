@@ -18,6 +18,85 @@
   },
   "additionalProperties": true,
   "$defs": {
+    "ByPatternDependency": {
+      "description": "One by-pattern install entry: a discovery by-pattern `category` plus its write `action`.",
+      "properties": {
+        "category": {
+          "title": "Category",
+          "type": "string"
+        },
+        "action": {
+          "enum": [
+            "init",
+            "replace",
+            "json_merge"
+          ],
+          "title": "Action",
+          "type": "string"
+        }
+      },
+      "required": [
+        "category",
+        "action"
+      ],
+      "title": "ByPatternDependency",
+      "type": "object"
+    },
+    "Dependencies": {
+      "description": "The `install` block: selection of discovered items plus how they are written.\n\n`target-platforms` governs the fixed categories only (`by-pattern` mirrors to\nits discovery path). Each fixed-category list holds `fnmatch` name-globs over\ndiscovered ids; absent/empty selects nothing, `\"*\"` matches everything.",
+      "properties": {
+        "target-platforms": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Target-Platforms",
+          "type": "array"
+        },
+        "agents": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Agents",
+          "type": "array"
+        },
+        "skills": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Skills",
+          "type": "array"
+        },
+        "commands": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Commands",
+          "type": "array"
+        },
+        "rules": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Rules",
+          "type": "array"
+        },
+        "by-pattern": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ByPatternDependency"
+          },
+          "title": "By-Pattern",
+          "type": "array"
+        }
+      },
+      "title": "Dependencies",
+      "type": "object"
+    },
     "SkillSource": {
       "description": "A single registry entry: identity plus its source location.\n\n`ref` is only meaningful for a `git` source_type; the coupling between\nsource_type and ref is enforced here (not via separate Git/Local classes)\nso it stays a single model \u2014 see design.md for the rationale.",
       "properties": {
@@ -51,6 +130,9 @@
           },
           "title": "Discovery",
           "type": "array"
+        },
+        "install": {
+          "$ref": "#/$defs/Dependencies"
         }
       },
       "required": [

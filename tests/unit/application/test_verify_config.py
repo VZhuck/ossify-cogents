@@ -4,19 +4,26 @@ from unittest.mock import MagicMock
 import pytest
 
 from application import VerifyConfig
-from application.services import DiscoveryResolver, RegistryValidator
-from domain.discovery import DiscoveryDefinition, Mapping
+from application.services import DiscoveryResolver, InstallResolver, RegistryValidator
+from domain.dependencies import Dependencies
+from domain.discovery import ByPatternRule, DiscoveryDefinition, Mapping
 from domain.errors import (
     ConfigNotFoundError,
     DuplicateDiscoveryIdError,
     DuplicateSourceIdError,
+    UnknownTargetPlatformError,
+    UnresolvableByPatternCategoryError,
     UnresolvableDiscoveryIdError,
 )
 from domain.ossify_config import ConfigSection
 from domain.skill_registry import SkillSource
 
 
-def _entry(entry_id: str, discovery: list[str] | None = None) -> SkillSource:
+def _entry(
+    entry_id: str,
+    discovery: list[str] | None = None,
+    install: Dependencies | None = None,
+) -> SkillSource:
     return SkillSource(
         id=entry_id,
         name=entry_id.title(),
@@ -24,6 +31,7 @@ def _entry(entry_id: str, discovery: list[str] | None = None) -> SkillSource:
         source_type="git",
         source={"uri": f"https://github.com/acme-org/{entry_id}.git"},
         discovery=discovery or [],
+        install=install or Dependencies(),
     )
 
 
@@ -58,6 +66,7 @@ def verify_config(config_repository: MagicMock) -> VerifyConfig:
         config_repository=config_repository,
         validator=RegistryValidator(),
         discovery_resolver=DiscoveryResolver(builtins=[_definition("ossify-open-standard")]),
+        install_resolver=InstallResolver(supported_platforms={"claude", "cursor"}),
     )
 
 
@@ -131,4 +140,73 @@ def test_verify_raises_on_duplicate_discovery_definition_id(
     )
 
     with pytest.raises(DuplicateDiscoveryIdError):
+        verify_config.verify(Path("/repo"))
+
+
+def _by_pattern_definition(definition_id: str, category: str) -> DiscoveryDefinition:
+    return DiscoveryDefinition(
+        id=definition_id,
+        mappings=Mapping(
+            by_pattern=[ByPatternRule(type="file", path=".vscode/settings.json", category=category)]
+        ),
+    )
+
+
+def test_verify_passes_for_star_target_platform(
+    verify_config: VerifyConfig, config_repository: MagicMock
+) -> None:
+    config_repository.read_section.side_effect = _read_section_by_config_section(
+        [_entry("a", install=Dependencies(target_platforms=["*"]))], []
+    )
+
+    verify_config.verify(Path("/repo"))
+
+
+def test_verify_raises_on_unknown_target_platform(
+    verify_config: VerifyConfig, config_repository: MagicMock
+) -> None:
+    config_repository.read_section.side_effect = _read_section_by_config_section(
+        [_entry("a", install=Dependencies(target_platforms=["eclipse"]))], []
+    )
+
+    with pytest.raises(UnknownTargetPlatformError):
+        verify_config.verify(Path("/repo"))
+
+
+def test_verify_passes_for_resolvable_by_pattern_category(
+    verify_config: VerifyConfig, config_repository: MagicMock
+) -> None:
+    config_repository.read_section.side_effect = _read_section_by_config_section(
+        [
+            _entry(
+                "a",
+                discovery=["custom-strat"],
+                install=Dependencies(
+                    by_pattern=[{"category": "vs-code-settings", "action": "json_merge"}]
+                ),
+            )
+        ],
+        [_by_pattern_definition("custom-strat", "vs-code-settings")],
+    )
+
+    verify_config.verify(Path("/repo"))
+
+
+def test_verify_raises_on_unresolvable_by_pattern_category(
+    verify_config: VerifyConfig, config_repository: MagicMock
+) -> None:
+    config_repository.read_section.side_effect = _read_section_by_config_section(
+        [
+            _entry(
+                "a",
+                discovery=["ossify-open-standard"],
+                install=Dependencies(
+                    by_pattern=[{"category": "vs-code-settings", "action": "json_merge"}]
+                ),
+            )
+        ],
+        [],
+    )
+
+    with pytest.raises(UnresolvableByPatternCategoryError):
         verify_config.verify(Path("/repo"))

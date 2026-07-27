@@ -71,9 +71,7 @@ def test_add_explicit_overrides_win_over_inference(
     assert entry.name == "Custom Name"
 
 
-def test_add_rejects_duplicate_id(
-    service: RegistryService, registry_repository: MagicMock
-) -> None:
+def test_add_rejects_duplicate_id(service: RegistryService, registry_repository: MagicMock) -> None:
     registry_repository.get_all.return_value = [_entry("agent-pack")]
 
     with pytest.raises(DuplicateSourceIdError):

@@ -33,3 +33,19 @@ class UnresolvableDiscoveryIdError(OssifyError):
 
 class DuplicateDiscoveryIdError(OssifyError):
     """Raised when a `discovery-definitions` id collides with another custom entry or a built-in."""
+
+
+class UnresolvableByPatternCategoryError(OssifyError):
+    """Raised when an `install.by-pattern` category matches no discovery by-pattern category."""
+
+
+class UnknownTargetPlatformError(OssifyError):
+    """Raised when an `install.target-platforms` value is not a supported target platform."""
+
+
+class UnmatchedInstallSelectionError(OssifyError):
+    """Raised when an exact-literal install selection matches no discovered id."""
+
+
+class UnsupportedTargetActionError(OssifyError):
+    """Raised when a target adapter cannot perform a requested write action."""

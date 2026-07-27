@@ -4,6 +4,7 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 from cli import app
+from domain.dependencies import Dependencies
 
 runner = CliRunner()
 
@@ -106,6 +107,36 @@ def test_registry_get_reports_no_config_found(tmp_path: Path) -> None:
     result = runner.invoke(app, ["--workspace", str(tmp_path), "registry", "get"])
 
     assert result.exit_code != 0
+
+
+def test_registry_add_preserves_hand_authored_install_on_sibling_entry(tmp_path: Path) -> None:
+    runner.invoke(
+        app,
+        ["--workspace", str(tmp_path), "registry", "add", "https://github.com/acme-org/first.git"],
+    )
+    config_path = tmp_path / "ossify-cogents.json"
+    raw = json.loads(config_path.read_text())
+    hand_authored_install = {
+        "target-platforms": ["claude"],
+        "skills": ["code-review"],
+        "by-pattern": [{"category": "vs-code-settings", "action": "json_merge"}],
+    }
+    raw["ossify-skills-registry"][0]["install"] = hand_authored_install
+    config_path.write_text(json.dumps(raw))
+
+    result = runner.invoke(
+        app,
+        ["--workspace", str(tmp_path), "registry", "add", "https://github.com/acme-org/second.git"],
+    )
+
+    assert result.exit_code == 0, result.stdout
+    updated = json.loads(config_path.read_text())
+    # Round-trip normalizes the block (omitted empty categories materialize to []),
+    # but every declared value is preserved — nothing hand-authored is dropped.
+    preserved = updated["ossify-skills-registry"][0]["install"]
+    assert Dependencies.model_validate(preserved) == Dependencies.model_validate(
+        hand_authored_install
+    )
 
 
 def test_config_verify_passes_for_valid_registry(tmp_path: Path) -> None:

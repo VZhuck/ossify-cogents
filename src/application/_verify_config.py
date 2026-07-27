@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from application.services import DiscoveryResolver, RegistryValidator
+from application.services import DiscoveryResolver, InstallResolver, RegistryValidator
 from domain.discovery import DiscoveryDefinition
 from domain.errors import ConfigNotFoundError, UnresolvableDiscoveryIdError
 from domain.ossify_config import ConfigSection
@@ -9,17 +9,19 @@ from ports_out import ConfigRepository
 
 
 class VerifyConfig:
-    """Implements `ports_in.OssifyConfigPort` — schema + duplicate-id + discovery-id validation."""
+    """Implements `ports_in.OssifyConfigPort` — schema, duplicate-id, discovery + install checks."""
 
     def __init__(
         self,
         config_repository: ConfigRepository,
         validator: RegistryValidator,
         discovery_resolver: DiscoveryResolver,
+        install_resolver: InstallResolver,
     ) -> None:
         self._config_repository = config_repository
         self._validator = validator
         self._discovery_resolver = discovery_resolver
+        self._install_resolver = install_resolver
 
     def verify(self, root: Path) -> None:
         if not self._config_repository.exists(root):
@@ -39,11 +41,13 @@ class VerifyConfig:
             )
             or []
         )
-        resolvable_ids = self._discovery_resolver.resolvable_ids(custom_definitions)
+        definitions_by_id = self._discovery_resolver.resolvable_definitions(custom_definitions)
 
         for entry in entries:
             for discovery_id in entry.discovery:
-                if discovery_id not in resolvable_ids:
+                if discovery_id not in definitions_by_id:
                     raise UnresolvableDiscoveryIdError(
                         f"unresolvable discovery id {discovery_id!r} on registry entry {entry.id!r}"
                     )
+
+        self._install_resolver.validate_static(entries, definitions_by_id)

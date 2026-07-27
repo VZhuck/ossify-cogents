@@ -1,4 +1,5 @@
-"""Built-in discovery strategies: packaged code data, never written to config.
+"""Packaged code data (never written to config): built-in discovery strategies
+and the set of supported target-platform ids.
 
 NOTE: the `ossify-` id prefix is reserved for built-in discovery strategies,
 by convention/documentation only — there is no dedicated validator enforcing
@@ -22,3 +23,7 @@ OSSIFY_OPEN_STANDARD = DiscoveryDefinition(
 )
 
 BUILTIN_DISCOVERY_STRATEGIES: list[DiscoveryDefinition] = [OSSIFY_OPEN_STANDARD]
+
+# Supported target-platform ids an `install.target-platforms` value may reference
+# (besides the `"*"` all-platforms wildcard).
+SUPPORTED_TARGET_PLATFORMS: set[str] = {"claude", "cursor", "copilot", "windsurf"}

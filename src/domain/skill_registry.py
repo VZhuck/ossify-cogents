@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from domain.config_model import ConfigModel
+from domain.dependencies import Dependencies
 from domain.errors import InvalidRegistryEntryError
 
 
@@ -31,6 +32,7 @@ class SkillSource(ConfigModel):
     source_type: Literal["git", "local"]
     source: Source
     discovery: list[str] = []
+    install: Dependencies = Field(default_factory=Dependencies)
 
     @model_validator(mode="after")
     def _apply_source_type_rules(self) -> SkillSource:

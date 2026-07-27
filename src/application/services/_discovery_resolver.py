@@ -11,11 +11,16 @@ class DiscoveryResolver:
         self._builtins = builtins
 
     def resolvable_ids(self, custom_definitions: list[DiscoveryDefinition]) -> set[str]:
-        seen: set[str] = set()
+        return set(self.resolvable_definitions(custom_definitions))
+
+    def resolvable_definitions(
+        self, custom_definitions: list[DiscoveryDefinition]
+    ) -> dict[str, DiscoveryDefinition]:
+        definitions: dict[str, DiscoveryDefinition] = {}
         for definition in [*self._builtins, *custom_definitions]:
-            if definition.id in seen:
+            if definition.id in definitions:
                 raise DuplicateDiscoveryIdError(
                     f"discovery strategy {definition.id!r} is already defined"
                 )
-            seen.add(definition.id)
-        return seen
+            definitions[definition.id] = definition
+        return definitions

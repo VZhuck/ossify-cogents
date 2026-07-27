@@ -42,9 +42,7 @@ def add(
     source_uri: Annotated[
         str | None, typer.Option("--source.uri", help="Alias for the positional uri.")
     ] = None,
-    source_type: Annotated[
-        str, typer.Option("--source-type", help="'git' or 'local'.")
-    ] = "git",
+    source_type: Annotated[str, typer.Option("--source-type", help="'git' or 'local'.")] = "git",
     source_ref: Annotated[
         str | None, typer.Option("--source.ref", help="Git ref (git sources only).")
     ] = None,
