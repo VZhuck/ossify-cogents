@@ -4,12 +4,14 @@
 
 Defines the declarative `install` model on a registry entry: its block schema (target platforms, fixed-category selection lists, and `by-pattern` entries), the fixed-category selection semantics, and the dynamic selection resolution policy applied at sync time.
 
-> **Scope note — apply/install deferred.** This capability covers only the
-> declarative `install` model, its selection semantics, and the dynamic
-> resolution policy. The *apply* layer — installing selected fixed-category
-> items into target-platform layouts and mirroring `by-pattern` files with
-> `init`/`replace`/`json_merge` action semantics — is out of scope and deferred
-> to a standalone feature (blocked on the unbuilt `SyncCapabilities` reconciler).
+> **Scope note — apply lives in `install-apply`.** This capability covers only
+> the declarative `install` model, its selection semantics, and the dynamic
+> resolution policy. The imperative *apply* layer — installing selected
+> fixed-category items into target-platform layouts and mirroring `by-pattern`
+> files with `init`/`replace`/`json_merge` action semantics — is specified in the
+> `install-apply` capability and driven by the `ossify install` command. A
+> declarative lock/`sync` reconciler (drift detection, SHA persistence) remains
+> future work.
 
 ## Requirements
 

@@ -8,6 +8,7 @@ JSON, the one write action a plain filesystem target cannot perform.
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -50,6 +51,13 @@ class FilesystemTargetAdapter:
         else:
             merged = incoming
         self._write(target, json.dumps(merged, indent=2).encode() + b"\n")
+
+    def remove(self, path: Path) -> None:
+        target = self._resolve(path)
+        if target.is_dir():
+            shutil.rmtree(target)
+        else:
+            target.unlink(missing_ok=True)
 
     def _resolve(self, path: Path) -> Path:
         return self._root / path

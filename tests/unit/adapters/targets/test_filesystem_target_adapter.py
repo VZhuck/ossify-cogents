@@ -85,3 +85,25 @@ def test_merge_raises_unsupported_when_target_is_not_json(
 
     with pytest.raises(UnsupportedTargetActionError):
         adapter.merge(Path("settings.json"), json.dumps({"a": 1}).encode())
+
+
+def test_remove_deletes_a_directory_tree(adapter: FilesystemTargetAdapter, tmp_path: Path) -> None:
+    (tmp_path / "skills/code-review").mkdir(parents=True)
+    (tmp_path / "skills/code-review/SKILL.md").write_text("x")
+
+    adapter.remove(Path("skills/code-review"))
+
+    assert not (tmp_path / "skills/code-review").exists()
+
+
+def test_remove_deletes_a_file(adapter: FilesystemTargetAdapter, tmp_path: Path) -> None:
+    (tmp_path / "agents").mkdir()
+    (tmp_path / "agents/planner.md").write_text("x")
+
+    adapter.remove(Path("agents/planner.md"))
+
+    assert not (tmp_path / "agents/planner.md").exists()
+
+
+def test_remove_is_a_noop_on_absent_path(adapter: FilesystemTargetAdapter) -> None:
+    adapter.remove(Path("nope/missing"))  # must not raise

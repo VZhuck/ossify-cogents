@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-07-27
+goal: "Add imperative 'ossify install' that fetches selected capabilities from
+  remote/local sources into the repo (Fork A: no lock)"

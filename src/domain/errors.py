@@ -53,3 +53,11 @@ class UnmatchedInstallSelectionError(OssifyError):
 
 class UnsupportedTargetActionError(OssifyError):
     """Raised when a target adapter cannot perform a requested write action."""
+
+
+class SourceFetchError(OssifyError):
+    """Raised when materializing a registry source fails (e.g. a git clone/fetch failure)."""
+
+
+class TargetLayoutUnavailableError(OssifyError):
+    """Raised when no target-layout entry exists for a selected `(platform, category)` pair."""

@@ -25,3 +25,7 @@ class TargetPort(Protocol):
     def merge(self, path: Path, data: bytes) -> None:
         """`json_merge` semantics: deep-merge `data` into the existing target JSON."""
         ...
+
+    def remove(self, path: Path) -> None:
+        """Delete `path` (file or directory tree) under the target root; no-op if absent."""
+        ...
