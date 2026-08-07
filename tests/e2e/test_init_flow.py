@@ -36,6 +36,15 @@ def test_init_creates_default_config(tmp_path: Path) -> None:
     }
 
 
+def test_init_writes_schema_reference(tmp_path: Path) -> None:
+    assert _init(tmp_path).exit_code == 0
+
+    raw = json.loads((tmp_path / "ossify-cogents.json").read_text())
+    assert raw["$schema"] == (
+        "https://raw.githubusercontent.com/VZhuck/ossify-cogents/main/schema/v1.json"
+    )
+
+
 def test_init_writes_example_discovery_definition(tmp_path: Path) -> None:
     assert _init(tmp_path).exit_code == 0
 
@@ -77,6 +86,9 @@ def test_init_force_overwrites_hand_edited_config(tmp_path: Path) -> None:
     ids = [entry["id"] for entry in raw["ossify-skills-registry"]]
     assert ids == ["anthropic-skills"]
     assert "discovery-definitions" in raw
+    assert raw["$schema"] == (
+        "https://raw.githubusercontent.com/VZhuck/ossify-cogents/main/schema/v1.json"
+    )
     verify = runner.invoke(app, ["--workspace", str(tmp_path), "config", "verify"])
     assert verify.exit_code == 0, verify.stdout
 

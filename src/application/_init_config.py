@@ -1,6 +1,10 @@
 from pathlib import Path
 
-from domain._defaults import DEFAULT_DISCOVERY_DEFINITION, DEFAULT_REGISTRY_ITEM
+from domain._defaults import (
+    DEFAULT_DISCOVERY_DEFINITION,
+    DEFAULT_REGISTRY_ITEM,
+    DEFAULT_SCHEMA_URL,
+)
 from domain.discovery import DiscoveryDefinition
 from domain.errors import ConfigAlreadyExistsError
 from domain.ossify_config import ConfigSection
@@ -25,6 +29,12 @@ class InitConfig:
             # existing file is not read-merged, and no stale sections survive.
             self._config_repository.delete(root)
 
+        self._config_repository.write_section(
+            root,
+            ConfigSection.SCHEMA,
+            DEFAULT_SCHEMA_URL,
+            str,
+        )
         self._config_repository.write_section(
             root,
             ConfigSection.SKILL_REGISTRY,

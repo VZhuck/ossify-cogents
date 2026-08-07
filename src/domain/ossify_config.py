@@ -13,6 +13,7 @@ class ConfigSection(StrEnum):
 
     SKILL_REGISTRY = "ossify-skills-registry"
     DISCOVERY_DEFINITIONS = "discovery-definitions"
+    SCHEMA = "$schema"
 
 
 class OssifyConfig(BaseModel):

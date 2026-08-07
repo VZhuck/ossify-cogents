@@ -13,6 +13,9 @@ from domain.dependencies import Dependencies
 from domain.discovery import DiscoveryDefinition, GlobRule, Mapping
 from domain.skill_registry import SkillSource, Source
 
+DEFAULT_SCHEMA_URL = "https://raw.githubusercontent.com/VZhuck/ossify-cogents/main/schema/v1.json"
+"""The `$schema` value `ossify init` writes, enabling editor autocomplete/validation."""
+
 DEFAULT_REGISTRY_ITEM = SkillSource(
     id="anthropic-skills",
     name="Anthropic Skills",

@@ -3,7 +3,11 @@ from pathlib import Path
 import pytest
 
 from application import InitConfig
-from domain._defaults import DEFAULT_DISCOVERY_DEFINITION, DEFAULT_REGISTRY_ITEM
+from domain._defaults import (
+    DEFAULT_DISCOVERY_DEFINITION,
+    DEFAULT_REGISTRY_ITEM,
+    DEFAULT_SCHEMA_URL,
+)
 from domain.errors import ConfigAlreadyExistsError
 from domain.ossify_config import ConfigSection
 from domain.skill_registry import SkillSource
@@ -38,6 +42,7 @@ def test_writes_both_default_sections_in_empty_workspace(tmp_path: Path) -> None
     written = {section: value for section, value in repo.writes}
     assert written[ConfigSection.SKILL_REGISTRY] == [DEFAULT_REGISTRY_ITEM]
     assert written[ConfigSection.DISCOVERY_DEFINITIONS] == [DEFAULT_DISCOVERY_DEFINITION]
+    assert written[ConfigSection.SCHEMA] == DEFAULT_SCHEMA_URL
     assert repo.deleted is False
 
 
@@ -58,7 +63,11 @@ def test_force_deletes_then_writes_when_config_exists(tmp_path: Path) -> None:
 
     assert repo.deleted is True
     written = {section for section, _ in repo.writes}
-    assert written == {ConfigSection.SKILL_REGISTRY, ConfigSection.DISCOVERY_DEFINITIONS}
+    assert written == {
+        ConfigSection.SKILL_REGISTRY,
+        ConfigSection.DISCOVERY_DEFINITIONS,
+        ConfigSection.SCHEMA,
+    }
 
 
 def test_registry_section_value_is_a_single_skill_source(tmp_path: Path) -> None:

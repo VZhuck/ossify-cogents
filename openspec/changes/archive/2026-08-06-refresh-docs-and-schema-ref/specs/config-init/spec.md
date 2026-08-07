@@ -1,24 +1,4 @@
-# config-init Specification
-
-## Purpose
-
-Defines the `ossify init` CLI command, which scaffolds a default `ossify-cogents.json` at the resolved workspace root — seeding it with a single curated git registry entry, an explicit empty install skeleton, and one example custom discovery definition — and governs its behaviour when a config already exists (fast-fail absent `--force`, wholesale override with `--force`).
-
-## Requirements
-
-### Requirement: `ossify init` scaffolds a default config
-
-The system SHALL provide a top-level `init` command that writes a default
-`ossify-cogents.json` at the resolved workspace root. On success it SHALL exit
-with a zero status.
-
-#### Scenario: Writes a default config in an empty workspace
-
-- **WHEN** `ossify init` runs in a workspace that has no `ossify-cogents.json`
-- **THEN** the system SHALL create `ossify-cogents.json` at the workspace root
-- **AND** SHALL exit with a zero status
-- **AND** the written file SHALL be valid against the config schema (it passes
-  `config verify`)
+## MODIFIED Requirements
 
 ### Requirement: Default config contents
 
@@ -78,22 +58,6 @@ prefix, so that the written config passes `config verify`.
   field set to
   `https://raw.githubusercontent.com/VZhuck/ossify-cogents/main/schema/v1.json`
 - **AND** the written config SHALL still pass `config verify`
-
-### Requirement: `ossify init` fast-fails when a config already exists
-
-Absent the `--force` flag, the system SHALL treat an existing
-`ossify-cogents.json` at the resolved workspace root as a hard error: `ossify
-init` SHALL report the error, SHALL exit with a non-zero status, and SHALL write
-nothing. It SHALL NOT overwrite, merge into, or partially modify the existing
-file.
-
-#### Scenario: Existing config is left untouched
-
-- **WHEN** `ossify init` runs without `--force` in a workspace that already has a
-  `ossify-cogents.json`
-- **THEN** the system SHALL report an error identifying the existing config
-- **AND** SHALL exit with a non-zero status
-- **AND** SHALL leave the existing `ossify-cogents.json` byte-for-byte unchanged
 
 ### Requirement: `ossify init --force` overrides an existing config
 
