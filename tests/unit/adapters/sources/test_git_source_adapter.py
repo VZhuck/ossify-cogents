@@ -31,6 +31,16 @@ def bare_remote(tmp_path: Path) -> Path:
     return bare
 
 
+def _push_new_commit(bare_remote: Path, tmp_path: Path, *, branch: str, filename: str) -> None:
+    """Pushes one more commit onto `branch` in `bare_remote`, simulating upstream progress."""
+    checkout = tmp_path / "push-checkout"
+    _git(tmp_path, "clone", "--branch", branch, str(bare_remote), str(checkout))
+    (checkout / filename).write_text("new content")
+    _git(checkout, "add", ".")
+    _git(checkout, "commit", "-m", f"add {filename}")
+    _git(checkout, "push", "origin", branch)
+
+
 def _git_entry(uri: str, ref: str = "main") -> SkillSource:
     return SkillSource(
         id="pack",
@@ -65,6 +75,34 @@ def test_existing_cache_is_reused_not_recloned(
 
     assert second == first
     assert marker.exists()
+
+
+def test_second_materialize_picks_up_new_upstream_commit_on_branch_ref(
+    bare_remote: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("OSSIFY_CACHE_DIR", str(tmp_path / "cache"))
+    adapter = GitSourceAdapter()
+    adapter.materialize(_git_entry(str(bare_remote), ref="main"))
+    _push_new_commit(bare_remote, tmp_path, branch="main", filename="new-note.md")
+
+    root = adapter.materialize(_git_entry(str(bare_remote), ref="main"))
+
+    assert (root / "new-note.md").read_text() == "new content"
+
+
+def test_second_materialize_leaves_tag_ref_pinned_despite_new_branch_commit(
+    bare_remote: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _git(bare_remote, "tag", "v1")
+    monkeypatch.setenv("OSSIFY_CACHE_DIR", str(tmp_path / "cache"))
+    adapter = GitSourceAdapter()
+    adapter.materialize(_git_entry(str(bare_remote), ref="v1"))
+    _push_new_commit(bare_remote, tmp_path, branch="main", filename="new-note.md")
+
+    root = adapter.materialize(_git_entry(str(bare_remote), ref="v1"))
+
+    assert not (root / "new-note.md").exists()
+    assert (root / "skills" / "note.md").read_text() == "hello"
 
 
 def test_cache_dir_honors_env_override(

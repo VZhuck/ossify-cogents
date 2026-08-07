@@ -37,11 +37,25 @@ class GitSourceAdapter:
 
         if (repo_dir / ".git").is_dir():
             self._git(["fetch", "--all", "--tags", "--prune"], cwd=repo_dir)
+            if self._remote_branch_exists(repo_dir, ref):
+                self._git(["checkout", "-B", ref, f"origin/{ref}"], cwd=repo_dir)
+            else:
+                self._git(["checkout", ref], cwd=repo_dir)
         else:
             repo_dir.parent.mkdir(parents=True, exist_ok=True)
             self._git(["clone", uri, str(repo_dir)], cwd=None)
-        self._git(["checkout", ref], cwd=repo_dir)
+            self._git(["checkout", ref], cwd=repo_dir)
         return repo_dir
+
+    def _remote_branch_exists(self, repo_dir: Path, ref: str) -> bool:
+        result = subprocess.run(
+            ["git", "rev-parse", "--verify", "--quiet", f"refs/remotes/origin/{ref}"],
+            cwd=repo_dir,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return result.returncode == 0
 
     def walk(self, root: Path, subpath: Path) -> Iterable[Path]:
         return _working_tree.walk(root, subpath)
