@@ -202,3 +202,127 @@ def test_git_install_and_cache_reuse(
     assert second.exit_code == 0, second.stdout
     cache_repos = list((tmp_path / "cache" / "repos").iterdir())
     assert len(cache_repos) == 1
+
+
+def _write_file_shaped_source(root: Path) -> None:
+    """A source whose `commands`/`rules` folders hold loose files, not directories."""
+    (root / "commands").mkdir(parents=True)
+    (root / "commands/md-to-word.md").write_text("# md to word")
+    (root / "rules").mkdir(parents=True)
+    (root / "rules/architecture.md").write_text("# architecture")
+
+
+def _linked_workspace(tmp_path: Path, mode: str = "link", *, git: bool = True) -> tuple[Path, Path]:
+    source = tmp_path / "toolkit"
+    source.mkdir()
+    _write_open_standard_source(source)
+    _write_file_shaped_source(source)
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    if git:
+        (workspace / ".git/info").mkdir(parents=True)
+    _config_with_entry(
+        workspace,
+        {
+            "id": "toolkit",
+            "name": "Toolkit",
+            "description": "",
+            "source-type": "local",
+            "source": {"uri": str(source)},
+            "discovery": ["ossify-open-standard"],
+            "install": {
+                "mode": mode,
+                "target-platforms": ["claude"],
+                "skills": ["code-review"],
+                "commands": ["md-to-word"],
+                "rules": ["architecture"],
+            },
+        },
+    )
+    return source, workspace
+
+
+def test_file_shaped_items_install_without_a_doubled_extension(tmp_path: Path) -> None:
+    _, workspace = _linked_workspace(tmp_path, mode="copy", git=False)
+
+    result = runner.invoke(app, ["--workspace", str(workspace), "install"])
+
+    assert result.exit_code == 0, result.stdout
+    assert (workspace / ".claude/commands/md-to-word.md").read_text() == "# md to word"
+    assert (workspace / ".claude/rules/architecture.md").read_text() == "# architecture"
+    assert not (workspace / ".claude/commands/md-to-word.md.md").exists()
+
+
+def test_link_mode_links_writes_the_exclude_block_and_renders_links(tmp_path: Path) -> None:
+    source, workspace = _linked_workspace(tmp_path)
+
+    result = runner.invoke(app, ["--workspace", str(workspace), "install"])
+
+    assert result.exit_code == 0, result.stdout
+    skill = workspace / ".claude/skills/code-review"
+    rule = workspace / ".claude/rules/architecture.md"
+    assert skill.is_symlink()
+    assert rule.is_symlink()
+    # the link is the source file: an edit through the workspace reaches the toolkit
+    rule.write_text("# edited through the workspace")
+    assert (source / "rules/architecture.md").read_text() == "# edited through the workspace"
+    exclude = (workspace / ".git/info/exclude").read_text()
+    assert ".claude/skills/code-review" in exclude
+    assert "=>" in result.stdout
+
+
+def test_link_install_is_idempotent(tmp_path: Path) -> None:
+    _, workspace = _linked_workspace(tmp_path)
+    runner.invoke(app, ["--workspace", str(workspace), "install"])
+    first_exclude = (workspace / ".git/info/exclude").read_bytes()
+
+    result = runner.invoke(app, ["--workspace", str(workspace), "install"])
+
+    assert result.exit_code == 0, result.stdout
+    assert (workspace / ".claude/skills/code-review").is_symlink()
+    assert (workspace / ".git/info/exclude").read_bytes() == first_exclude
+
+
+def test_copy_install_then_link_install_adopts_every_destination(tmp_path: Path) -> None:
+    source, workspace = _linked_workspace(tmp_path, mode="copy")
+    assert runner.invoke(app, ["--workspace", str(workspace), "install"]).exit_code == 0
+    assert not (workspace / ".claude/skills/code-review").is_symlink()
+    config = workspace / "ossify-cogents.json"
+    config.write_text(config.read_text().replace('"mode": "copy"', '"mode": "link"'))
+
+    result = runner.invoke(app, ["--workspace", str(workspace), "install"])
+
+    assert result.exit_code == 0, result.stdout
+    assert (workspace / ".claude/skills/code-review").is_symlink()
+    assert (workspace / ".claude/rules/architecture.md").is_symlink()
+
+
+def test_in_workspace_source_links_relatively_and_survives_a_move(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    (workspace / "tools/toolkit").mkdir(parents=True)
+    _write_file_shaped_source(workspace / "tools/toolkit")
+    _config_with_entry(
+        workspace,
+        {
+            "id": "toolkit",
+            "name": "Toolkit",
+            "description": "",
+            "source-type": "local",
+            "source": {"uri": str(workspace / "tools/toolkit")},
+            "discovery": ["ossify-open-standard"],
+            "install": {
+                "mode": "link",
+                "target-platforms": ["claude"],
+                "rules": ["architecture"],
+            },
+        },
+    )
+
+    result = runner.invoke(app, ["--workspace", str(workspace), "install"])
+
+    assert result.exit_code == 0, result.stdout
+    rule = workspace / ".claude/rules/architecture.md"
+    assert not Path(rule.readlink()).is_absolute()
+    moved = tmp_path / "moved"
+    workspace.rename(moved)
+    assert (moved / ".claude/rules/architecture.md").read_text() == "# architecture"

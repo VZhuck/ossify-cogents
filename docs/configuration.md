@@ -31,6 +31,7 @@ Each entry is a `SkillSource`: an `id`/`name`/`description`, a `source` (git URL
   "source": { "uri": "https://github.com/acme-org/agent-pack.git", "ref": "main" },
   "discovery": ["ossify-open-standard"],
   "install": {
+    "mode": "copy",
     "target-platforms": ["claude"],
     "agents": [],
     "skills": [],
@@ -47,8 +48,10 @@ Each entry is a `SkillSource`: an `id`/`name`/`description`, a `source` (git URL
 
 A `discovery` strategy maps a source's file layout to a flat list of ids per category (`agents`, `skills`, `commands`, `rules`, plus a free-form `by-pattern`). Those ids are what your `install` selections match against — not raw file paths.
 
-- **Folder rule** (`{"type": "folder", "path": "agents"}`): each immediate child folder/file name under `agents/` becomes a discoverable id.
+- **Folder rule** (`{"type": "folder", "path": "agents"}`): each immediate child under `agents/` becomes a discoverable id. A child *directory* keeps its name; a child *file* contributes its stem.
 - **File rule** (`{"type": "file", "path": "<glob>"}`): the file stem of each match becomes a discoverable id.
+
+Discovered ids are always **extension-free canonical names**, whichever rule produced them: `commands/md-to-word.md` discovers as `md-to-word`. The extension belongs to the destination, not the id — the same id installs as `.claude/commands/md-to-word.md` for Claude and `.github/instructions/md-to-word.instructions.md` for Copilot. Write your `install` selections against the bare name; a literal that includes the extension matches nothing and fails the run.
 
 The built-in `ossify-open-standard` strategy (referenced by id, never written into your config) expects this layout at a source's root:
 
@@ -86,7 +89,30 @@ Each fixed category in `install` (`agents`, `skills`, `commands`, `rules`) is a 
 - **A literal name** (e.g. `"code-reviewer"`) → must match an existing id exactly, or `install` fails with an error.
 - **A glob** (e.g. `"review-*"`) → matches whatever it matches; if it matches nothing, `install` emits a warning rather than failing.
 
-> **`target-platforms` does NOT support `"*"`.** Unlike the fixed-category lists above, `target-platforms` takes literal platform names only — `"claude"`, `"copilot"`, `"codex"` are currently wired with real target layouts. Setting `target-platforms: ["*"]` passes `config verify` (it's accepted as a static value) but fails at `install` time with a `TargetLayoutUnavailableError`, because there's no wildcard fan-out for platforms. Always list platforms explicitly.
+### `mode`: copy or link
+
+`install.mode` decides how the selected files reach your workspace:
+
+- **`"copy"`** (the default, and what you get when the field is absent) writes the bytes into the destination.
+- **`"link"`** points the destination at the source with a symbolic link, so the installed capability *is* the source file. Edits propagate both ways with no re-install, which is what you want while authoring a shared toolkit that several repos consume.
+
+`mode: "link"` requires `source-type: "local"`. A `git` entry declaring it is rejected as an invalid registry entry (offline, by `config verify`) because ossify hard-resets its git cache on every fetch — an edit made through a link into that cache would be destroyed on the next run without warning.
+
+There is no CLI flag for this. Linking is a per-entry decision, and a config routinely mixes a `git` source with one or more `local` ones.
+
+**Link geometry is derived, not configured.** A source resolving *inside* the workspace root links relatively (`.claude/skills/pdf -> ../../tools/toolkit/skills/pdf`), which survives a clone and is meant to be committed. A source *outside* the workspace links absolutely, which is machine-specific — those destinations are recorded in `.git/info/exclude`, never `.gitignore`. See [install-process.md](install-process.md) for the full link semantics.
+
+> **`target-platforms` takes literal platform names, and the usable set is narrower than `config verify` accepts.** Two lists disagree today, so check both before you commit a value:
+>
+> | Value | `config verify` | `install` |
+> |---|---|---|
+> | `"claude"` | accepted | works (`skills`, `agents`, `commands`, `rules`) |
+> | `"copilot"` | accepted | works (`skills`, `agents`, `rules`; no `commands`) |
+> | `"codex"` | **rejected** — `unknown target platform 'codex'` | would work (`skills` only) |
+> | `"cursor"`, `"windsurf"` | accepted | fails — `TargetLayoutUnavailableError`, no layout wired |
+> | `"*"` | accepted | fails — `TargetLayoutUnavailableError`, there is no wildcard fan-out |
+>
+> Unlike the fixed-category lists above, `"*"` is **not** expanded here. In practice, `"claude"` and `"copilot"` are the two values that work end to end; list them explicitly.
 
 ## Walkthrough: from the empty scaffold to a real install
 

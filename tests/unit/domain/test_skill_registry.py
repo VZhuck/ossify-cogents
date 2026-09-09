@@ -130,3 +130,33 @@ def test_update_via_model_copy_preserves_install_block() -> None:
 
     assert patched.source.ref == "develop"
     assert patched.install == original.install
+
+
+def test_link_mode_accepted_on_a_local_source() -> None:
+    entry = SkillSource(
+        id="toolkit",
+        name="Toolkit",
+        description="",
+        source_type="local",
+        source={"uri": "~/toolkit"},
+        install=Dependencies(mode="link"),
+    )
+
+    assert entry.install.mode == "link"
+
+
+def test_link_mode_rejected_on_a_git_source() -> None:
+    # The git cache is hard-reset on every fetch, so an edit made through a link
+    # into it is destroyed without warning. Rejected at parse time, so offline
+    # `config verify` reports it without fetching anything.
+    with pytest.raises(InvalidRegistryEntryError) as excinfo:
+        SkillSource(
+            id="agent-pack",
+            name="Agent Pack",
+            description="",
+            source_type="git",
+            source={"uri": "https://github.com/acme-org/agent-pack.git"},
+            install=Dependencies(mode="link"),
+        )
+
+    assert "agent-pack" in str(excinfo.value)

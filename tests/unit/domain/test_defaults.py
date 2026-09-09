@@ -35,6 +35,7 @@ def test_default_item_dumps_kebab_skeleton_on_disk() -> None:
     # every install field is present (empty lists are not elided) so the
     # written file documents the block's shape
     assert raw["install"] == {
+        "mode": "copy",
         "target-platforms": ["claude"],
         "agents": [],
         "skills": [],

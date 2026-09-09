@@ -1,6 +1,9 @@
 from pathlib import Path
 
+import pytest
+
 from adapters.sources import LocalSourceAdapter
+from domain.errors import SourceFetchError
 from domain.skill_registry import SkillSource
 
 
@@ -43,3 +46,20 @@ def test_read_bytes_reads_from_root(tmp_path: Path) -> None:
     adapter = LocalSourceAdapter()
 
     assert adapter.read_bytes(tmp_path, Path("file.txt")) == b"data"
+
+
+def test_materialize_missing_path_raises(tmp_path: Path) -> None:
+    # A missing local source used to walk to nothing, so the entry installed zero
+    # items and exited zero — a silent no-op for a broken config.
+    entry = SkillSource(
+        id="toolkit",
+        name="Toolkit",
+        description="",
+        source_type="local",
+        source={"uri": str(tmp_path / "absent")},
+    )
+
+    with pytest.raises(SourceFetchError) as excinfo:
+        LocalSourceAdapter().materialize(entry)
+
+    assert "toolkit" in str(excinfo.value)

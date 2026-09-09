@@ -55,9 +55,29 @@ class UnsupportedTargetActionError(OssifyError):
     """Raised when a target adapter cannot perform a requested write action."""
 
 
+class TargetNotWritableError(OssifyError):
+    """Raised when the filesystem denies a write ossify-cogents needs to perform.
+
+    Carries the offending path, its owner, and the `chown` that fixes it, because
+    the reflex this error has to head off is re-running the command under `sudo`.
+    """
+
+
 class SourceFetchError(OssifyError):
     """Raised when materializing a registry source fails (e.g. a git clone/fetch failure)."""
 
 
 class TargetLayoutUnavailableError(OssifyError):
     """Raised when no target-layout entry exists for a selected `(platform, category)` pair."""
+
+
+class ShapeMismatchError(OssifyError):
+    """Raised when a discovered item's shape disagrees with its target layout's expectation."""
+
+
+class SeveredLinkError(OssifyError):
+    """Raised when a `mode: link` destination holds content that differs from its source."""
+
+
+class LinkNotSupportedError(OssifyError):
+    """Raised when the platform cannot create the symbolic link a `mode: link` entry requires."""

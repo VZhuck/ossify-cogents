@@ -46,3 +46,16 @@ def test_round_trips_through_kebab_aliases() -> None:
 def test_invalid_by_pattern_action_rejected() -> None:
     with pytest.raises(ValidationError):
         ByPatternDependency(category="vs-code-settings", action="overwrite")
+
+
+def test_mode_defaults_to_copy() -> None:
+    assert Dependencies().mode == "copy"
+
+
+def test_mode_parses_link() -> None:
+    assert Dependencies(mode="link").mode == "link"
+
+
+def test_unknown_mode_rejected() -> None:
+    with pytest.raises(ValidationError):
+        Dependencies(mode="symlink")

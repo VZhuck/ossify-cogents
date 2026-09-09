@@ -166,8 +166,18 @@ ossify-cogents install
 
 Fetches every registered source and copies your selected agents/skills/commands/rules into the workspace.
 
+### Live-editing a local source
+
+If a registry entry points at a `local` source you are actively authoring — a shared toolkit consumed by several repos — set `"mode": "link"` on its `install` block:
+
+```json
+"install": { "mode": "link", "target-platforms": ["claude"], "skills": ["*"] }
+```
+
+`install` then symlinks the capabilities into the workspace instead of copying them, so an edit made in either place is immediately live in the other and no re-install is needed. Link mode requires `source-type: "local"`; a `git` source rejects it, because ossify hard-resets its git cache on every fetch. Two workspaces linking the same toolkit share one set of files and will see each other's edits. Details in [docs/install-process.md](docs/install-process.md).
+
 ## Advanced Topics
 
-- [docs/configuration.md](docs/configuration.md) — full `ossify-cogents.json` anatomy: discovery definitions, install-selection semantics (globs, wildcards, `by-pattern`), and known limitations like `target-platforms` not supporting `"*"`.
-- [docs/install-process.md](docs/install-process.md) — what `install` does under the hood: cache location, always-refetch behavior, copy-from-cache rather than per-file GitHub reads, and why there's no lock file yet.
+- [docs/configuration.md](docs/configuration.md) — full `ossify-cogents.json` anatomy: discovery definitions, install-selection semantics (globs, wildcards, `by-pattern`), and known limitations like `target-platforms` not supporting `"*"` (and accepting some platforms `install` cannot yet write).
+- [docs/install-process.md](docs/install-process.md) — what `install` does under the hood: cache location, always-refetch behavior, copy-from-cache rather than per-file GitHub reads, `mode: link` semantics (geometry, `.git/info/exclude`, adoption, pruning), and why there's no lock file yet.
 - [docs/development.md](docs/development.md) — running `ossify-cogents` from a local clone instead of installing it, plus the test/lint/type-check quality gate for contributors.

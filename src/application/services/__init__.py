@@ -1,6 +1,10 @@
 """Application-level services: single-pillar logic shared across use cases."""
 
-from application.services._discovery_execution import DiscoveryExecution, DiscoveryResult
+from application.services._discovery_execution import (
+    DiscoveredItem,
+    DiscoveryExecution,
+    DiscoveryResult,
+)
 from application.services._discovery_resolver import DiscoveryResolver
 from application.services._install_resolver import InstallResolver
 from application.services._registry_validator import RegistryValidator
@@ -9,6 +13,7 @@ from application.services._target_layout import Destination, TargetLayout
 
 __all__ = [
     "Destination",
+    "DiscoveredItem",
     "DiscoveryExecution",
     "DiscoveryResolver",
     "DiscoveryResult",

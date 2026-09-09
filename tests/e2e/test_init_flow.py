@@ -27,6 +27,7 @@ def test_init_creates_default_config(tmp_path: Path) -> None:
     assert entry["source-type"] == "git"
     assert entry["discovery"] == ["ossify-open-standard"]
     assert entry["install"] == {
+        "mode": "copy",
         "target-platforms": ["claude"],
         "agents": [],
         "skills": [],

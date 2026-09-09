@@ -39,6 +39,12 @@ class SkillSource(ConfigModel):
         if self.source_type == "local" and self.source.ref is not None:
             raise InvalidRegistryEntryError(f"local source {self.id!r} must not set source.ref")
 
+        if self.source_type == "git" and self.install.mode == "link":
+            raise InvalidRegistryEntryError(
+                f"git source {self.id!r} must not set install.mode 'link': the git cache is "
+                "hard-reset on every fetch, so edits made through a link into it are destroyed"
+            )
+
         if self.source_type == "git" and self.source.ref is None:
             object.__setattr__(self, "source", self.source.model_copy(update={"ref": "main"}))
 

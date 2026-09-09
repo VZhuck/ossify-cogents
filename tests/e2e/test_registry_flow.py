@@ -227,3 +227,29 @@ def test_config_verify_fails_for_discovery_definition_colliding_with_builtin(
     result = runner.invoke(app, ["--workspace", str(tmp_path), "config", "verify"])
 
     assert result.exit_code != 0
+
+
+def test_config_verify_rejects_link_mode_on_a_git_source(tmp_path: Path) -> None:
+    # Enforced by the `SkillSource` model validator, so `config verify` catches it
+    # while parsing — offline, without fetching the source.
+    (tmp_path / "ossify-cogents.json").write_text(
+        json.dumps(
+            {
+                "ossify-skills-registry": [
+                    {
+                        "id": "agent-pack",
+                        "name": "Agent Pack",
+                        "description": "",
+                        "source-type": "git",
+                        "source": {"uri": "https://github.com/acme-org/agent-pack.git"},
+                        "discovery": [],
+                        "install": {"mode": "link"},
+                    }
+                ]
+            }
+        )
+    )
+
+    result = runner.invoke(app, ["--workspace", str(tmp_path), "config", "verify"])
+
+    assert result.exit_code != 0

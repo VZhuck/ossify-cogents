@@ -3,16 +3,29 @@
 This adapter is JSON-capable: `merge` deep-merges JSON payloads. It raises
 `UnsupportedTargetActionError` when asked to `merge` content that is not valid
 JSON, the one write action a plain filesystem target cannot perform.
+
+It is also symlink-aware: destinations may themselves be links into a source tree
+(`install.mode: link`), so every path operation here is careful to act on the link
+rather than on what it points at.
+
+Every mutation goes through `_filesystem`, which reports a denied write as an
+actionable `TargetNotWritableError` and hands anything created back to the user
+behind a `sudo` invocation. Installing must never require elevation, and an
+elevated run must not leave capabilities its own user cannot edit.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import shutil
+import subprocess
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-from domain.errors import UnsupportedTargetActionError
+from adapters import _filesystem
+from domain.errors import LinkNotSupportedError, UnsupportedTargetActionError
 
 
 def _deep_merge(base: Any, overlay: Any) -> Any:
@@ -32,7 +45,45 @@ class FilesystemTargetAdapter:
         self._root = root
 
     def exists(self, path: Path) -> bool:
-        return self._resolve(path).exists()
+        target = self._resolve(path)
+        # A broken link still occupies the path, so `exists()` alone would miss it.
+        return target.exists() or target.is_symlink()
+
+    def is_symlink(self, path: Path) -> bool:
+        return self._resolve(path).is_symlink()
+
+    def walk(self, path: Path) -> Iterable[Path]:
+        root = self._resolve(path)
+        for absolute in self._walk_files(root):
+            yield absolute.relative_to(root)
+
+    def read(self, path: Path) -> bytes:
+        return self._resolve(path).read_bytes()
+
+    def children(self, path: Path) -> Iterable[Path]:
+        root = self._resolve(path)
+        if not root.is_dir() or root.is_symlink():
+            return
+        for entry in sorted(root.iterdir()):
+            yield path / entry.name
+
+    def link_target(self, path: Path) -> Path | None:
+        target = self._resolve(path)
+        if not target.is_symlink():
+            return None
+        return target.resolve()
+
+    def _walk_files(self, root: Path) -> Iterable[Path]:
+        """Files under `root`, never descending through a symlinked directory."""
+        if root.is_symlink() or not root.is_dir():
+            return
+        for entry in sorted(root.iterdir()):
+            if entry.is_symlink():
+                continue
+            if entry.is_dir():
+                yield from self._walk_files(entry)
+            elif entry.is_file():
+                yield entry
 
     def create_if_absent(self, path: Path, data: bytes) -> None:
         target = self._resolve(path)
@@ -54,17 +105,62 @@ class FilesystemTargetAdapter:
 
     def remove(self, path: Path) -> None:
         target = self._resolve(path)
-        if target.is_dir():
+        with _filesystem.writable(target):
+            self._remove(target)
+
+    def _remove(self, target: Path) -> None:
+        # Order matters: `is_dir()` *follows* symlinks, so a link to a directory would
+        # take the `rmtree` branch — which refuses a symlink and raises. Unlinking
+        # first also keeps `remove()` from ever reaching through a link: `rmtree`
+        # with `ignore_errors=True`, or any hand-rolled recursion, would delete the
+        # source tree the link points at.
+        if target.is_symlink():
+            target.unlink()
+        elif target.is_dir():
             shutil.rmtree(target)
         else:
             target.unlink(missing_ok=True)
+
+    def link(self, path: Path, source: Path, *, is_directory: bool) -> None:
+        target = self._resolve(path)
+        self.remove(path)
+        _filesystem.mkdir(target.parent)
+        # Not wrapped in `_filesystem.writable`: Windows reports "no symlink privilege"
+        # as a permission errno, and translating it would preempt the junction fallback
+        # below. `mkdir` above already guards the case a POSIX box can actually hit.
+        try:
+            os.symlink(source, target, target_is_directory=is_directory)
+        except OSError as exc:
+            if is_directory and self._junction(target, source):
+                return
+            raise LinkNotSupportedError(
+                f"cannot create a symbolic link at {path} -> {source}: {exc}. "
+                "On Windows, enable Developer Mode or run as administrator; "
+                "ossify does not fall back to copying, which would stop edits "
+                "propagating back to the source."
+            ) from exc
+        _filesystem.deescalate(target)
+
+    def _junction(self, target: Path, source: Path) -> bool:
+        """Windows directory-link fallback: a junction needs no elevation. False elsewhere."""
+        if os.name != "nt":
+            return False
+        resolved = source if source.is_absolute() else (target.parent / source).resolve()
+        result = subprocess.run(  # noqa: S603 - fixed argv, no shell
+            ["cmd", "/c", "mklink", "/J", str(target), str(resolved)],  # noqa: S607
+            capture_output=True,
+            check=False,
+        )
+        return result.returncode == 0
 
     def _resolve(self, path: Path) -> Path:
         return self._root / path
 
     def _write(self, target: Path, data: bytes) -> None:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(data)
+        _filesystem.mkdir(target.parent)
+        with _filesystem.writable(target):
+            target.write_bytes(data)
+        _filesystem.deescalate(target)
 
     def _parse_json(self, data: bytes) -> Any:
         try:

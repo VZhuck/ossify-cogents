@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from application.services import DiscoveryExecution
+from application.services import DiscoveredItem, DiscoveryExecution
 from domain.discovery import ByPatternRule, DiscoveryDefinition, GlobRule, Mapping
 
 
@@ -47,8 +47,8 @@ def test_folder_rule_enumerates_children_as_ids(source: FakeSource, tmp_path: Pa
     result = source_enumerate(source, tmp_path, definition)
 
     assert result.fixed["skills"] == {
-        "code-review": Path("skills/code-review"),
-        "planner": Path("skills/planner"),
+        "code-review": DiscoveredItem(location=Path("skills/code-review"), shape="dir"),
+        "planner": DiscoveredItem(location=Path("skills/planner"), shape="dir"),
     }
 
 
@@ -61,8 +61,39 @@ def test_file_rule_enumerates_by_stem(source: FakeSource, tmp_path: Path) -> Non
     result = source_enumerate(source, tmp_path, definition)
 
     assert result.fixed["rules"] == {
-        "style": Path("rules/style.md"),
-        "naming": Path("rules/naming.md"),
+        "style": DiscoveredItem(location=Path("rules/style.md"), shape="file"),
+        "naming": DiscoveredItem(location=Path("rules/naming.md"), shape="file"),
+    }
+
+
+def test_folder_rule_over_file_children_uses_stem_ids(source: FakeSource, tmp_path: Path) -> None:
+    """A folder of loose files: ids drop the extension so the layout can add its own."""
+    (tmp_path / "commands").mkdir()
+    (tmp_path / "commands/md-to-word.md").write_text("a")
+    (tmp_path / "commands/sad-sections.instructions.md").write_text("b")
+    definition = _definition(Mapping(commands=[GlobRule(type="folder", path="commands")]))
+
+    result = source_enumerate(source, tmp_path, definition)
+
+    assert result.fixed["commands"] == {
+        "md-to-word": DiscoveredItem(location=Path("commands/md-to-word.md"), shape="file"),
+        "sad-sections.instructions": DiscoveredItem(
+            location=Path("commands/sad-sections.instructions.md"), shape="file"
+        ),
+    }
+
+
+def test_folder_rule_records_mixed_child_shapes(source: FakeSource, tmp_path: Path) -> None:
+    (tmp_path / "capabilities/alpha").mkdir(parents=True)
+    (tmp_path / "capabilities/alpha/SKILL.md").write_text("a")
+    (tmp_path / "capabilities/beta.md").write_text("b")
+    definition = _definition(Mapping(skills=[GlobRule(type="folder", path="capabilities")]))
+
+    result = source_enumerate(source, tmp_path, definition)
+
+    assert result.fixed["skills"] == {
+        "alpha": DiscoveredItem(location=Path("capabilities/alpha"), shape="dir"),
+        "beta": DiscoveredItem(location=Path("capabilities/beta.md"), shape="file"),
     }
 
 
@@ -89,7 +120,9 @@ def test_by_pattern_category_is_recorded(source: FakeSource, tmp_path: Path) -> 
 
     result = source_enumerate(source, tmp_path, definition)
 
-    assert result.by_pattern["vs-code-settings"] == {"settings": Path(".vscode/settings.json")}
+    assert result.by_pattern["vs-code-settings"] == {
+        "settings": DiscoveredItem(location=Path(".vscode/settings.json"), shape="file")
+    }
 
 
 def source_enumerate(source: FakeSource, root: Path, definition: DiscoveryDefinition):

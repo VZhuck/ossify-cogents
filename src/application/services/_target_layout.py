@@ -11,6 +11,10 @@ out to several dirs is a data-only addition.
 Installs are verbatim content copy: a destination relocates and renames an item
 (directory vs file, per-platform extension) but never transforms its bytes. A
 `(platform, category)` with no registry entry is an error, not a silent skip.
+
+A destination's `shape` is what this layout *expects* to find. Discovery owns the
+*observed* shape of an item; the install pipeline compares the two and refuses a
+destination whose expectation the source contradicts.
 """
 
 from __future__ import annotations
@@ -26,7 +30,11 @@ Shape = Literal["dir", "file"]
 
 @dataclass(frozen=True)
 class Destination:
-    """A resolved install destination: a repo-relative path plus its shape."""
+    """A resolved install destination: a repo-relative path plus its expected shape.
+
+    `shape` says what this layout expects an item to be, not what it is — the
+    observed shape comes from discovery and is checked against this.
+    """
 
     path: Path
     shape: Shape
@@ -60,6 +68,19 @@ class TargetLayout:
         self, layouts: dict[str, dict[str, list[tuple[str, Shape]]]] | None = None
     ) -> None:
         self._layouts = layouts if layouts is not None else DEFAULT_TARGET_LAYOUTS
+
+    def owned_roots(self) -> list[Path]:
+        """The directories the configured layouts install into, deduplicated.
+
+        Stale-link pruning scans these: a destination this tool could have written
+        is the only place it may unlink something it no longer claims.
+        """
+        roots: dict[Path, None] = {}
+        for by_category in self._layouts.values():
+            for templates in by_category.values():
+                for template, _ in templates:
+                    roots[Path(template).parent] = None
+        return list(roots)
 
     def resolve(self, platform: str, category: str, item_id: str) -> list[Destination]:
         by_category = self._layouts.get(platform)

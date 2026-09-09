@@ -28,8 +28,13 @@ class Dependencies(ConfigModel):
     `target-platforms` governs the fixed categories only (`by-pattern` mirrors to
     its discovery path). Each fixed-category list holds `fnmatch` name-globs over
     discovered ids; absent/empty selects nothing, `"*"` matches everything.
+
+    `mode` is the sole control over copy-versus-link installation — there is no
+    CLI flag, because linking is a per-entry decision. `link` requires a `local`
+    source; the rule is enforced on `SkillSource`, which knows the source type.
     """
 
+    mode: Literal["copy", "link"] = "copy"
     target_platforms: list[str] = []
     agents: list[str] = []
     skills: list[str] = []

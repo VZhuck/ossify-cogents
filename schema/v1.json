@@ -43,8 +43,17 @@
       "type": "object"
     },
     "Dependencies": {
-      "description": "The `install` block: selection of discovered items plus how they are written.\n\n`target-platforms` governs the fixed categories only (`by-pattern` mirrors to\nits discovery path). Each fixed-category list holds `fnmatch` name-globs over\ndiscovered ids; absent/empty selects nothing, `\"*\"` matches everything.",
+      "description": "The `install` block: selection of discovered items plus how they are written.\n\n`target-platforms` governs the fixed categories only (`by-pattern` mirrors to\nits discovery path). Each fixed-category list holds `fnmatch` name-globs over\ndiscovered ids; absent/empty selects nothing, `\"*\"` matches everything.\n\n`mode` is the sole control over copy-versus-link installation \u2014 there is no\nCLI flag, because linking is a per-entry decision. `link` requires a `local`\nsource; the rule is enforced on `SkillSource`, which knows the source type.",
       "properties": {
+        "mode": {
+          "default": "copy",
+          "enum": [
+            "copy",
+            "link"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
         "target-platforms": {
           "default": [],
           "items": {

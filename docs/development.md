@@ -20,6 +20,8 @@ This creates a local virtual environment with the project and its dependencies (
 uv run ossify-cogents --version
 ```
 
+`src/container.py` is force-included as a top-level module rather than covered by the editable install, so the console script keeps using the copy in `.venv/…/site-packages/container.py` until the project is reinstalled. After editing the container, run `uv sync --reinstall-package ossify-cogents` — otherwise the CLI wires up the old graph while `pytest` (which imports from `src/`) sees the new one.
+
 If the virtual environment is already activated (`source .venv/bin/activate`), drop the `uv run` prefix:
 
 ```bash

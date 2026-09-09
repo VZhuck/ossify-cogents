@@ -18,6 +18,7 @@ from pathlib import Path
 
 import platformdirs
 
+from adapters import _filesystem
 from adapters.sources import _working_tree
 from domain.errors import SourceFetchError
 from domain.skill_registry import SkillSource
@@ -42,9 +43,12 @@ class GitSourceAdapter:
             else:
                 self._git(["checkout", ref], cwd=repo_dir)
         else:
-            repo_dir.parent.mkdir(parents=True, exist_ok=True)
+            _filesystem.mkdir(repo_dir.parent)
             self._git(["clone", uri, str(repo_dir)], cwd=None)
             self._git(["checkout", ref], cwd=repo_dir)
+        # An elevated run must not leave a root-owned cache behind: the next
+        # unelevated `fetch` would fail to write objects into it.
+        _filesystem.deescalate_tree(repo_dir)
         return repo_dir
 
     def _remote_branch_exists(self, repo_dir: Path, ref: str) -> bool:

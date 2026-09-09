@@ -5,9 +5,15 @@ runtime half of `skill-discovery` — it walks a materialized tree with a strate
 `Mapping` globs to enumerate the ids actually present and each id's location.
 
 Enumeration semantics (per the `skill-discovery` spec):
-- a `folder` rule yields the folder's immediate children, id = child name;
-- a `file` rule yields matching files, id = file stem;
+- a `folder` rule yields the folder's immediate children; a child with files
+  beneath it is shape `dir` and keeps its name as the id, a child that is itself
+  a file is shape `file` and its id is the stem;
+- a `file` rule yields matching files, shape `file`, id = file stem;
 - a rule whose path is absent contributes no ids (no error).
+
+Ids are therefore extension-free in every case: `TargetLayout` owns the
+destination name and re-adds a per-platform extension, so an id that kept its own
+would double it (`commands/x.md` -> `.claude/commands/x.md.md`).
 """
 
 from __future__ import annotations
@@ -15,6 +21,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from fnmatch import fnmatchcase
 from pathlib import Path
+from typing import Literal
 
 from domain.discovery import DiscoveryDefinition, GlobRule
 from ports_out import SourcePort
@@ -23,16 +30,32 @@ _FIXED_CATEGORIES = ("agents", "skills", "commands", "rules")
 _GLOB_METACHARACTERS = frozenset("*?[")
 
 
-@dataclass(frozen=True)
-class DiscoveryResult:
-    """Discovered ids and their working-tree locations, split by category kind.
+Shape = Literal["dir", "file"]
 
-    `fixed` is keyed by the four fixed categories; `by_pattern` by each rule's
-    free-form `category`. Each inner map is `id -> location` (relative to root).
+
+@dataclass(frozen=True)
+class DiscoveredItem:
+    """One discovered capability: where it lives in the tree, and what it is.
+
+    `shape` is an *observation* about the source. `TargetLayout` states the shape
+    it expects at a destination; the install pipeline compares the two rather than
+    letting either assume the other.
     """
 
-    fixed: dict[str, dict[str, Path]] = field(default_factory=dict)
-    by_pattern: dict[str, dict[str, Path]] = field(default_factory=dict)
+    location: Path
+    shape: Shape
+
+
+@dataclass(frozen=True)
+class DiscoveryResult:
+    """Discovered ids and their working-tree items, split by category kind.
+
+    `fixed` is keyed by the four fixed categories; `by_pattern` by each rule's
+    free-form `category`. Each inner map is `id -> DiscoveredItem`.
+    """
+
+    fixed: dict[str, dict[str, DiscoveredItem]] = field(default_factory=dict)
+    by_pattern: dict[str, dict[str, DiscoveredItem]] = field(default_factory=dict)
 
 
 class DiscoveryExecution:
@@ -52,28 +75,47 @@ class DiscoveryExecution:
         return result
 
     def _merge(
-        self, target: dict[str, dict[str, Path]], category: str, found: dict[str, Path]
+        self,
+        target: dict[str, dict[str, DiscoveredItem]],
+        category: str,
+        found: dict[str, DiscoveredItem],
     ) -> None:
         target.setdefault(category, {}).update(found)
 
-    def _enumerate(self, source: SourcePort, root: Path, rule: GlobRule) -> dict[str, Path]:
+    def _enumerate(
+        self, source: SourcePort, root: Path, rule: GlobRule
+    ) -> dict[str, DiscoveredItem]:
         if rule.type == "folder":
             return self._enumerate_folder(source, root, rule.path)
         return self._enumerate_files(source, root, rule.path)
 
-    def _enumerate_folder(self, source: SourcePort, root: Path, path: str) -> dict[str, Path]:
+    def _enumerate_folder(
+        self, source: SourcePort, root: Path, path: str
+    ) -> dict[str, DiscoveredItem]:
+        """Immediate children of `folder`, shaped by whether the walk descended into them.
+
+        `walk` yields files only, so a child with more than one path part below the
+        folder is a directory; one with exactly one part is a file itself.
+        """
         folder = Path(path)
-        found: dict[str, Path] = {}
+        found: dict[str, DiscoveredItem] = {}
         for relative in source.walk(root, folder):
-            child = relative.relative_to(folder).parts[0]
-            found[child] = folder / child
+            parts = relative.relative_to(folder).parts
+            child = parts[0]
+            location = folder / child
+            if len(parts) > 1:
+                found[child] = DiscoveredItem(location=location, shape="dir")
+            else:
+                found[Path(child).stem] = DiscoveredItem(location=location, shape="file")
         return found
 
-    def _enumerate_files(self, source: SourcePort, root: Path, pattern: str) -> dict[str, Path]:
-        found: dict[str, Path] = {}
+    def _enumerate_files(
+        self, source: SourcePort, root: Path, pattern: str
+    ) -> dict[str, DiscoveredItem]:
+        found: dict[str, DiscoveredItem] = {}
         for relative in source.walk(root, _glob_prefix(pattern)):
             if fnmatchcase(relative.as_posix(), pattern):
-                found[relative.stem] = relative
+                found[relative.stem] = DiscoveredItem(location=relative, shape="file")
         return found
 
 

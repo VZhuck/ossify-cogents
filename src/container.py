@@ -8,6 +8,7 @@ already-wired instances to `cli/`/`tui/`.
 from dependency_injector import containers, providers
 
 from adapters.ossify_config_adapter import OssifyConfigAdapter
+from adapters.persistence import GitExcludeAdapter
 from adapters.skill_registry_adapter import SkillRegistryAdapter
 from adapters.sources import GitSourceAdapter, LocalSourceAdapter
 from adapters.targets import FilesystemTargetAdapter
@@ -36,6 +37,9 @@ class Container(containers.DeclarativeContainer):
     # Target adapter is rooted at the workspace by its consumer (the install use
     # case) at call time; registered here so no other module constructs it.
     target_adapter = providers.Factory(FilesystemTargetAdapter)
+
+    # Owns `.git/info/exclude` maintenance for machine-specific link destinations.
+    git_exclude_adapter = providers.Factory(GitExcludeAdapter)
 
     # Source adapters keyed by `source-type`; the install use case dispatches by key.
     git_source_adapter = providers.Factory(GitSourceAdapter)
@@ -74,4 +78,5 @@ class Container(containers.DeclarativeContainer):
         install_resolver=install_resolver,
         target_layout=target_layout,
         target_factory=target_adapter.provider,
+        vcs_exclude=git_exclude_adapter,
     )
