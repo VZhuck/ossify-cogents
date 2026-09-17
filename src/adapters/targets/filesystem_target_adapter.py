@@ -28,6 +28,14 @@ from adapters import _filesystem
 from domain.errors import LinkNotSupportedError, UnsupportedTargetActionError
 
 
+def _is_junction(target: Path) -> bool:
+    return target.is_junction()
+
+
+def _is_link(target: Path) -> bool:
+    return target.is_symlink() or _is_junction(target)
+
+
 def _deep_merge(base: Any, overlay: Any) -> Any:
     """Recursively merge `overlay` into `base`; on any non-object conflict, `overlay` wins."""
     if isinstance(base, dict) and isinstance(overlay, dict):
@@ -47,10 +55,10 @@ class FilesystemTargetAdapter:
     def exists(self, path: Path) -> bool:
         target = self._resolve(path)
         # A broken link still occupies the path, so `exists()` alone would miss it.
-        return target.exists() or target.is_symlink()
+        return target.exists() or _is_link(target)
 
     def is_symlink(self, path: Path) -> bool:
-        return self._resolve(path).is_symlink()
+        return _is_link(self._resolve(path))
 
     def walk(self, path: Path) -> Iterable[Path]:
         root = self._resolve(path)
@@ -62,23 +70,23 @@ class FilesystemTargetAdapter:
 
     def children(self, path: Path) -> Iterable[Path]:
         root = self._resolve(path)
-        if not root.is_dir() or root.is_symlink():
+        if not root.is_dir() or _is_link(root):
             return
         for entry in sorted(root.iterdir()):
             yield path / entry.name
 
     def link_target(self, path: Path) -> Path | None:
         target = self._resolve(path)
-        if not target.is_symlink():
+        if not _is_link(target):
             return None
         return target.resolve()
 
     def _walk_files(self, root: Path) -> Iterable[Path]:
         """Files under `root`, never descending through a symlinked directory."""
-        if root.is_symlink() or not root.is_dir():
+        if _is_link(root) or not root.is_dir():
             return
         for entry in sorted(root.iterdir()):
-            if entry.is_symlink():
+            if _is_link(entry):
                 continue
             if entry.is_dir():
                 yield from self._walk_files(entry)
@@ -116,6 +124,8 @@ class FilesystemTargetAdapter:
         # source tree the link points at.
         if target.is_symlink():
             target.unlink()
+        elif _is_junction(target):
+            target.rmdir()
         elif target.is_dir():
             shutil.rmtree(target)
         else:
@@ -133,13 +143,25 @@ class FilesystemTargetAdapter:
         except OSError as exc:
             if is_directory and self._junction(target, source):
                 return
+            if not is_directory and self._hardlink(target, source):
+                return
             raise LinkNotSupportedError(
                 f"cannot create a symbolic link at {path} -> {source}: {exc}. "
-                "On Windows, enable Developer Mode or run as administrator; "
-                "ossify does not fall back to copying, which would stop edits "
-                "propagating back to the source."
+                "On Windows, enable Developer Mode or run as administrator; for file links, "
+                "make sure source and destination are on the same drive so ossify can fall "
+                "back to a hard link. Ossify does not fall back to copying, which would stop "
+                "edits propagating back to the source."
             ) from exc
         _filesystem.deescalate(target)
+
+    def _hardlink(self, target: Path, source: Path) -> bool:
+        """File-link fallback: a hard link needs no Windows symlink privilege."""
+        resolved = source if source.is_absolute() else (target.parent / source).resolve()
+        try:
+            os.link(resolved, target)
+        except OSError:
+            return False
+        return True
 
     def _junction(self, target: Path, source: Path) -> bool:
         """Windows directory-link fallback: a junction needs no elevation. False elsewhere."""

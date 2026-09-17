@@ -281,9 +281,12 @@ class InstallCapabilities:
         category: str,
         item_id: str,
         state: _RunState,
+        *,
+        guard_severance: bool = True,
     ) -> InstalledItem:
         link_target = self._link_target(context, item.location, destination)
-        self._guard_severance(context, item, destination, link_target)
+        if guard_severance:
+            self._guard_severance(context, item, destination, link_target)
         context.target.link(destination, link_target, is_directory=item.shape == "dir")
 
         state.linked.add(destination)
@@ -387,6 +390,7 @@ class InstallCapabilities:
                 by_pattern.category,
                 item_id,
                 state,
+                guard_severance=False,
             )
 
         if context.mode == "link":

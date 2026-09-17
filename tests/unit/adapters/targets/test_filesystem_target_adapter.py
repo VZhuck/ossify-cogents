@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from adapters.targets import FilesystemTargetAdapter
+from adapters.targets import FilesystemTargetAdapter, filesystem_target_adapter
 from domain.errors import TargetNotWritableError, UnsupportedTargetActionError
 
 
@@ -125,6 +125,27 @@ def test_remove_unlinks_a_symlinked_directory_without_touching_its_target(
     assert (source / "SKILL.md").read_bytes() == b"skill"
 
 
+def test_remove_unlinks_a_junction_without_recursing(
+    adapter: FilesystemTargetAdapter, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    junction = tmp_path / "linked"
+    junction.mkdir()
+    monkeypatch.setattr(
+        filesystem_target_adapter,
+        "_is_junction",
+        lambda target: target == junction,
+    )
+    monkeypatch.setattr(
+        filesystem_target_adapter.shutil,
+        "rmtree",
+        lambda target: pytest.fail(f"rmtree should not be used for {target}"),
+    )
+
+    adapter.remove(Path("linked"))
+
+    assert not junction.exists()
+
+
 def test_remove_still_deletes_a_real_directory_recursively(
     adapter: FilesystemTargetAdapter, tmp_path: Path
 ) -> None:
@@ -163,6 +184,29 @@ def test_link_creates_a_file_symlink_and_propagates_edits(
 
     destination = tmp_path / ".claude/rules/style.md"
     assert destination.is_symlink()
+    destination.write_bytes(b"edited through the workspace")
+    assert source.read_bytes() == b"edited through the workspace"
+
+
+def test_link_falls_back_to_file_hardlink_when_symlink_is_denied(
+    adapter: FilesystemTargetAdapter, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "toolkit/rules/style.md"
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b"original")
+    monkeypatch.setattr(
+        filesystem_target_adapter.os,
+        "symlink",
+        lambda source, target, target_is_directory: (_ for _ in ()).throw(
+            OSError("symlink denied")
+        ),
+    )
+
+    adapter.link(Path(".claude/rules/style.md"), source, is_directory=False)
+
+    destination = tmp_path / ".claude/rules/style.md"
+    assert destination.exists()
+    assert destination.samefile(source)
     destination.write_bytes(b"edited through the workspace")
     assert source.read_bytes() == b"edited through the workspace"
 
