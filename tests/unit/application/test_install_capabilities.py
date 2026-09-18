@@ -534,6 +534,25 @@ def test_replace_by_pattern_links_under_link_mode(tmp_path: Path) -> None:
     assert report.entries[0].warnings == []
 
 
+def test_replace_by_pattern_relinks_over_diverged_destination(tmp_path: Path) -> None:
+    source = FakeSource({".vscode/settings.json": b'{"a": 1}'})
+    target = FakeTarget()
+    target.files[Path(".vscode/settings.json")] = b'{"local": true}'
+    entry = _by_pattern_entry("replace").model_copy(
+        update={
+            "install": Dependencies(
+                mode="link", by_pattern=[{"category": "vs-code-settings", "action": "replace"}]
+            )
+        }
+    )
+    config = FakeConfigRepository([entry], definitions=[_custom_by_pattern_definition()])
+
+    _use_case(source, target, config).install(tmp_path)
+
+    assert Path(".vscode/settings.json") in target.links
+    assert Path(".vscode/settings.json") not in target.files
+
+
 def test_stale_links_are_pruned_but_copies_and_foreign_links_are_not(tmp_path: Path) -> None:
     source = FakeSource({"skills/pdf/SKILL.md": b"skill"})
     target = FakeTarget()
